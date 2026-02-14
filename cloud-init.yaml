@@ -29,7 +29,7 @@ runcmd:
   # Firewall einstellen (UFW)
   - ufw default deny incoming
   - ufw default allow outgoing
-  - ufw allow 22/tcp      # SSH (Falls du den Port änderst, hier anpassen!)
+  - ufw allow 22/tcp      
   - ufw allow 7860/tcp    # Dein Podcast-Generator (Gradio)
   - ufw --force enable
 

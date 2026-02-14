@@ -1,116 +1,106 @@
-# AI Podcast Generator
+# 🚀 Deployment Guide: AI Podcast Generator
 
-Ein KI-gestütztes Tool zur automatischen Erstellung von Podcasts aus verschiedenen Quellen (PDFs, Webseiten, Text). Das System nutzt Google Gemini für die Inhaltserstellung und Google Cloud Text-to-Speech für die Audio-Synthese.
-
-## 🚀 Features
-
-*   **Quellen-Import:** Unterstützung für PDF-Dokumente, Webseiten-URLs und direkten Text-Input.
-*   **KI-Skript-Generierung:** Nutzt Google Gemini Pro, um Inhalte zusammenzufassen und ein natürliches Podcast-Skript (Dialog oder Monolog) zu erstellen.
-*   **High-Quality Audio:** Verwendet Google Cloud TTS für realistische Stimmen.
-*   **Web-Interface:** Benutzerfreundliche Oberfläche basierend auf Gradio.
-*   **Benutzerverwaltung:** Login-System und Datenbank-Integration.
-*   **Email-Benachrichtigungen:** Integration von Mailgun.
+Diese Anleitung beschreibt, wie das System auf einer frischen VM (Ubuntu/Debian) installiert und abgesichert wird.
 
 ## 📋 Voraussetzungen
 
-Bevor du startest, stelle sicher, dass du folgende Accounts und Zugriffe hast:
+1.  **Server:** Eine VM mit mindestens 2GB RAM (4GB empfohlen).
+2.  **Betriebssystem:** Ubuntu 22.04 LTS oder Debian 12.
+3.  **Zugangsdaten:** 
+    *   Dein öffentlicher SSH-Key (`~/.ssh/id_rsa.pub`).
+    *   Google Cloud Service Account Key (`google-credentials.json`).
+    *   Google Gemini API Key.
 
-1.  **Google Cloud Platform (GCP) Account:**
-    *   Aktiviere die **Text-to-Speech API**.
-    *   Aktiviere die **Vertex AI API / Gemini API**.
-    *   Erstelle einen Service Account und lade den JSON-Key herunter (`google-credentials.json`).
-    *   Besorge dir einen API Key für Gemini (`GEMINI_API_KEY`).
-2.  **Mailgun Account (Optional):**
-    *   Für Email-Funktionalitäten wird ein API Key und eine Domain benötigt.
-3.  **Datenbank (MySQL):**
-    *   Eine erreichbare MySQL-Datenbank.
-    *   Falls die Datenbank auf einem entfernten Server liegt, wird ein SSH-Tunnel unterstützt.
+---
 
-## 🛠 Installation & Setup
+## 🛠 Schritt 1: Server-Provisionierung (Cloud-Init)
 
-### Option 1: Start mit Docker (Empfohlen)
+Beim Erstellen deiner VM (z.B. bei Hetzner, AWS oder DigitalOcean) kannst du die Datei `cloud-init.yaml` als **User Data** angeben.
 
-1.  **Repository klonen:**
-    ```bash
-    git clone <repo-url>
-    cd team04
-    ```
+**Was die Cloud-Init automatisch erledigt:**
+*   Installation von Docker & Docker Compose.
+*   Erstellung eines sicheren Users `deployuser`.
+*   **SSH Hardening:** Deaktivierung von Root-Login und Passwort-Authentifizierung.
+*   **Firewall (UFW):** Schließt alle Ports außer 22 (SSH) und 7860 (App).
 
-2.  **Umgebungsvariablen konfigurieren:**
-    Erstelle eine `.env` Datei im Hauptverzeichnis (siehe unten für Details).
+> **Wichtig:** Trage vor dem Start deinen SSH-Key in die `cloud-init.yaml` unter `ssh_authorized_keys` ein!
 
-3.  **Google Credentials:**
-    Platziere deine `google-credentials.json` im Projektordner.
+---
 
-4.  **Starten:**
-    ```bash
-    docker-compose up --build
-    ```
-    Die Anwendung ist anschließend unter `http://localhost:7860` erreichbar.
+## 🏗 Schritt 2: Anwendung installieren
 
-### Option 2: Lokale Installation (Entwicklung)
-
-1.  **System-Abhängigkeiten installieren:**
-    *   Python 3.11+
-    *   **FFmpeg** (wird für die Audio-Verarbeitung benötigt).
-        *   Ubuntu/Debian: `sudo apt install ffmpeg`
-        *   MacOS: `brew install ffmpeg`
-        *   Windows: FFmpeg herunterladen und zum PATH hinzufügen.
-
-2.  **Python-Dependencies installieren:**
-    ```bash
-    python -m venv .venv
-    source .venv/bin/activate  # Windows: .venv\Scripts\activate
-    pip install -r requirements.txt
-    ```
-
-3.  **Datenbank initialisieren:**
-    Stelle sicher, dass die DB-Verbindung in der `.env` korrekt ist.
-
-4.  **Starten:**
-    ```bash
-    python main.py
-    ```
-
-## 🔑 Konfiguration (.env)
-
-Erstelle eine `.env` Datei mit folgendem Inhalt (angepasst an deine Daten):
-
-```ini
-# Google Cloud
-GOOGLE_APPLICATION_CREDENTIALS=/app/google-credentials.json  # Pfad im Docker Container
-GOOGLE_KEY_LOCAL_PATH=./google-credentials.json             # Lokaler Pfad für Docker Volume
-GEMINI_API_KEY=dein_gemini_api_key_hier
-
-# Mailgun (Optional)
-MAILGUN_API_KEY=dein_mailgun_key
-MAILGUN_DOMAIN=deine_mailgun_domain
-
-# Datenbank (MySQL)
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=dein_db_user
-DB_PASSWORD=dein_db_pw
-DB_NAME=podcast_db
-
-# SSH Tunnel (Falls DB remote ist)
-SSH_HOST=remote.server.com
-SSH_USER=ssh_user
-SSH_KEY_PATH=/path/to/ssh/key
-SSH_KEY_LOCAL_PATH=./id_rsa  # Lokaler Pfad zum SSH Key für Docker
+Sobald die VM bereit ist, logge dich ein:
+```bash
+ssh deployuser@<deine-ip>
 ```
 
-## 📚 Verwendete APIs & Dienste
+Navigiere in das Zielverzeichnis und klone das Repository:
+```bash
+cd /opt/podcast-ai
+sudo git clone <deine-repo-url> .
+sudo chown -R deployuser:deployuser .
+```
 
-*   **Google Cloud Text-to-Speech:** Für die Generierung der Audiospuren.
-*   **Google Gemini (Generative AI):** Für die Analyse der Quellen und das Schreiben des Podcast-Skripts.
-*   **Mailgun:** Für den Versand von E-Mails (z.B. bei Passwort-Reset).
-*   **MariaDB:** Zur Speicherung von Benutzern, Jobs und Podcast-Metadaten.
+---
 
-## 📂 Projektstruktur
+## 🔑 Schritt 3: Konfiguration (.env)
 
-*   `frontend/`: Gradio UI Code.
-*   `services/`: Business Logic (TTS, LLM, Auth, etc.).
-*   `database/`: Datenbank-Modelle und Initialisierung.
-*   `repositories/`: Datenzugriffsschicht (DAL).
-*   `Output/`: Generierte MP3-Dateien.
+Erstelle die Umgebungsvariablen aus der Vorlage:
+```bash
+cp .env.example .env
+nano .env
+```
+
+Fülle die folgenden Felder aus:
+*   `GEMINI_API_KEY`: Dein API-Key von Google.
+*   `DB_PASSWORD`: Ein neues, sicheres Passwort für die MariaDB.
+*   `GOOGLE_KEY_LOCAL_PATH`: `./google-credentials.json`.
+
+**Wichtig:** Kopiere deine `google-credentials.json` per SCP auf den Server in den Ordner `/opt/podcast-ai/`.
+
+---
+
+## 🚢 Schritt 4: Start mit Docker Compose
+
+Starte die gesamte Infrastruktur (App + Datenbank):
+```bash
+docker-compose up -d --build
+```
+
+Die App ist nun unter `http://<deine-ip>:7860` erreichbar.
+
+---
+
+## 🛡 Sicherheits-Checks (Für die Übergabe)
+
+Um zu beweisen, dass das System gehärtet ist, kannst du folgende Befehle nutzen:
+
+1.  **Firewall-Status:**
+    ```bash
+    sudo ufw status
+    ```
+    *Ergebnis: Nur 22 und 7860 sollten "ALLOW" sein.*
+
+2.  **SSH Sicherheit:**
+    ```bash
+    grep "PermitRootLogin" /etc/ssh/sshd_config
+    ```
+    *Ergebnis: Sollte `no` sein.*
+
+3.  **Docker Container Status:**
+    ```bash
+    docker ps
+    ```
+    *Ergebnis: Zwei Container (`podcast-generator` und `podcast-db`) müssen laufen.*
+
+---
+
+## 💡 Tipps & Tricks für den Betrieb
+
+*   **Logs einsehen:** `docker-compose logs -f podcast-app` hilft bei der Fehlersuche.
+*   **Datenbank-Zugriff:** Du musst nicht in den DB-Container. Die App kümmert sich um die Tabellen.
+*   **Update:** Wenn du neuen Code hast: `git pull && docker-compose up -d --build`.
+
+---
+
+*Diese Dokumentation wurde für die Projektübergabe am 14. Februar 2026 erstellt.*
