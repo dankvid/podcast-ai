@@ -12,8 +12,7 @@ on:
 
 env:
   UV_CACHE_DIR: ${{ github.workspace }}/.cache/uv
-  CHROME_BIN: /usr/bin/chromium
-  CHROMEDRIVER_PATH: /usr/bin/chromedriver
+  CHROME_BIN: /usr/bin/google-chrome
 
 jobs:
   test_unit:
@@ -28,10 +27,11 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Chromium and Driver
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y chromium-browser chromium-chromedriver
+      - name: Install Google Chrome
+        uses: browser-actions/setup-chrome@latest
+
+      - name: Setup ChromeDriver
+        uses: nanasess/setup-chromedriver@v2
 
       - name: Install uv
         run: curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -55,27 +55,30 @@ jobs:
         run: |
           export PYTHONPATH=.
           ./.venv/bin/pytest --ignore=tests/test_real_db.py
-          build-and-push-docker:
-              needs: test_unit # Läuft nur, wenn die Tests bestanden haben
-              runs-on: ubuntu-latest
-              if: github.ref == 'refs/heads/main' # Optional: Nur bei Pushes auf Main bauen
-              
-              steps:
-                - name: Checkout Code
-                  uses: actions/checkout@v4
-          
-                - name: Login to GitHub Container Registry
-                  uses: docker/login-action@v3
-                  with:
-                    registry: ghcr.io
-                    username: ${{ github.actor }}
-                    password: ${{ secrets.GITHUB_TOKEN }}
-          
-                - name: Build and Push Docker Image
-                  uses: docker/build-push-action@v5
-                  with:
-                    context: .
-                    push: true
-                    tags: |
-                      ghcr.io/${{ github.repository }}:latest
-                      ghcr.io/${{ github.repository }}:${{ github.sha }}
+
+  build-and-push-docker:
+    needs: test_unit # Läuft nur, wenn die Tests bestanden haben
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' # Optional: Nur bei Pushes auf Main bauen
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ github.sha }}
