@@ -2,13 +2,13 @@ from abc import ABC, abstractmethod
 
 from pydub import AudioSegment
 
-from database.models import PodcastStimme
+from database.models import PodcastStimme, Textbeitrag, Konvertierungsauftrag, Podcast
 from typing import List, Tuple, Dict, Any
 
 
 class ILLMService(ABC):
     @abstractmethod
-    def generate_script(self, prompt: str, config: dict) -> str:
+    def generate_script(self, thema: str, config: dict) -> str:
         """Erzeugt ein Skript basierend auf dem Prompt."""
         pass
 
@@ -82,7 +82,7 @@ class IWorkflow(ABC):
         audio_path: str,
         role1: str | None,
         role2: str | None,
-    ):
+    ) -> Tuple[Textbeitrag, Konvertierungsauftrag, Podcast]:
         """Speichert die Podcast-Metadaten in der Datenbank."""
         pass
 
