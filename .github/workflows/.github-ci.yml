@@ -1,0 +1,81 @@
+name: Unit Tests
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+    branches:
+      - main
+      - dev
+
+env:
+  UV_CACHE_DIR: ${{ github.workspace }}/.cache/uv
+  CHROME_BIN: /usr/bin/chromium
+  CHROMEDRIVER_PATH: /usr/bin/chromedriver
+
+jobs:
+  test_unit:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Chromium and Driver
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chromium-browser chromium-chromedriver
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Cache uv dependencies
+        uses: actions/cache@v4
+        with:
+          path: .cache/uv
+          key: uv-v1-${{ runner.os }}-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            uv-v1-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: |
+          uv venv .venv
+          # In GitHub Actions nutzt man 'source' oder fügt den Pfad zur GITHUB_PATH hinzu
+          echo "${{ github.workspace }}/.venv/bin" >> $GITHUB_PATH
+          ./.venv/bin/uv pip install -r requirements.txt
+
+      - name: Run Tests
+        run: |
+          export PYTHONPATH=.
+          ./.venv/bin/pytest --ignore=tests/test_real_db.py
+          build-and-push-docker:
+              needs: test_unit # Läuft nur, wenn die Tests bestanden haben
+              runs-on: ubuntu-latest
+              if: github.ref == 'refs/heads/main' # Optional: Nur bei Pushes auf Main bauen
+              
+              steps:
+                - name: Checkout Code
+                  uses: actions/checkout@v4
+          
+                - name: Login to GitHub Container Registry
+                  uses: docker/login-action@v3
+                  with:
+                    registry: ghcr.io
+                    username: ${{ github.actor }}
+                    password: ${{ secrets.GITHUB_TOKEN }}
+          
+                - name: Build and Push Docker Image
+                  uses: docker/build-push-action@v5
+                  with:
+                    context: .
+                    push: true
+                    tags: |
+                      ghcr.io/${{ github.repository }}:latest
+                      ghcr.io/${{ github.repository }}:${{ github.sha }}
