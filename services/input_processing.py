@@ -1,6 +1,5 @@
-import os
 import requests
-from typing import Tuple, Optional
+from typing import Tuple
 from pathlib import Path
 from PyPDF2 import PdfReader
 from bs4 import BeautifulSoup
