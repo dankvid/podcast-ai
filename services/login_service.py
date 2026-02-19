@@ -173,38 +173,6 @@ def process_verify_login(email: str, code: str) -> Dict[str, Any]:
         AuthenticationError: Bei fehlerhafter Verifizierung.
         Exception: Bei Datenbankfehlern.
     """
-    TEST_EMAIL = "test@smail.th-koeln.de"
-    FAMILY_EMAIL = "family@smail.th-koeln.de"
-    FAMILY_CODE = "family!2"
-    TEST_CODE = "testtest"
-
-    if email.lower() == FAMILY_EMAIL:
-        if code == FAMILY_CODE:
-            db = get_db()
-            try:
-                user = UserRepo(db).get_by_email(email)
-                if not user:
-                    user = UserRepo(db).create_user(email)
-                db.commit()
-                return {"id": user.userId, "email": email}
-            finally:
-                db.close()
-        else:
-            raise AuthenticationError("Ungültiger Code.")
-
-    if email.lower() == TEST_EMAIL:
-        if code == TEST_CODE:
-            db = get_db()
-            try:
-                user = UserRepo(db).get_by_email(email)
-                if not user:
-                    user = UserRepo(db).create_user(email)
-                db.commit()
-                return {"id": user.userId, "email": email}
-            finally:
-                db.close()
-        else:
-            raise AuthenticationError("Ungültiger Code.")
 
     db = get_db()
     try:
