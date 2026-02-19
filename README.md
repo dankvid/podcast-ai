@@ -1,107 +1,76 @@
-# 🚀 Deployment Guide: AI Podcast Generator
+# Podcast AI: Intelligenter Podcast-Generator
 
-Diese Anleitung beschreibt, wie das System auf einer frischen VM (Ubuntu/Debian) installiert und abgesichert wird.
+Podcast AI ist eine automatisierte Lösung zur Erstellung von Podcast-Episoden. Das System nutzt modernste Sprachmodelle (LLMs) zur Skripterstellung und hochwertige Text-to-Speech-Dienste (TTS), um aus einfachen Themenbeschreibungen oder Quelltexten fertige Audiobeiträge zu generieren.
 
-## 📋 Voraussetzungen
+## Hauptfunktionen
 
-1.  **Server:** Eine VM mit mindestens 2GB RAM (4GB empfohlen).
-2.  **Betriebssystem:** Ubuntu 22.04 LTS oder Debian 12.
-3.  **Zugangsdaten:** 
-    *   Dein öffentlicher SSH-Key (`~/.ssh/id_rsa.pub`).
-    *   Google Cloud Service Account Key (`google-credentials.json`).
-    *   Google Gemini API Key.
+- **KI-Skripterstellung**: Generierung von Podcast-Skripten basierend auf Themen, gewünschter Dauer und Zielgruppe mittels Google Gemini.
+- **Multi-Sprecher-Support**: Unterstützung für Dialoge zwischen verschiedenen Stimmen (z. B. Moderator und Gast).
+- **Hochwertige Sprachausgabe**: Integration von Google Cloud Text-to-Speech für natürlich klingende Stimmen.
+- **Web-Benutzeroberfläche**: Einfache Bedienung über ein Gradio-basiertes Web-Interface.
+- **Historie & Verwaltung**: Speicherung generierter Podcasts und Metadaten in einer Datenbank zur späteren Verwaltung.
 
----
+## Technische Architektur
 
-## 🛠 Schritt 1: Server-Provisionierung (Cloud-Init)
+Das Projekt folgt einem modularen Service-Repository-Muster:
 
-Beim Erstellen deiner VM (z.B. bei Hetzner, AWS oder DigitalOcean) kannst du die Datei `cloud-init.yaml` als **User Data** angeben.
+- **Frontend**: Gradio-UI (`frontend/ui.py`), die mit dem Controller interagiert.
+- **Services**: Kernlogik für den Workflow (`services/workflow.py`), LLM-Anbindung (`services/llm_service.py`) und TTS-Verarbeitung (`services/tts_service.py`).
+- **Repositories**: Datenzugriffsschicht für Benutzer, Stimmen und Podcast-Metadaten (`repositories/`).
+- **Datenbank**: SQLAlchemy-Anbindung an eine MariaDB/MySQL-Datenbank.
 
-**Was die Cloud-Init automatisch erledigt:**
-*   Installation von Docker & Docker Compose.
-*   Erstellung eines sicheren Users `deployuser`.
-*   **SSH Hardening:** Deaktivierung von Root-Login und Passwort-Authentifizierung.
-*   **Firewall (UFW):** Schließt alle Ports außer 22 (SSH) und 7860 (App).
+## Voraussetzungen
 
-> **Wichtig:** Trage vor dem Start deinen SSH-Key in die `cloud-init.yaml` unter `ssh_authorized_keys` ein!
+- **Python**: Version 3.11 oder höher.
+- **System-Tools**: FFmpeg (für die Audioverarbeitung erforderlich).
+- **API-Zugang**: 
+  - Google Gemini API Key.
+  - Google Cloud Service Account (JSON) für Text-to-Speech.
 
+## Installation
 
----
-
-## 🏗 Schritt 2: Anwendung installieren
-
-Sobald die VM bereit ist, logge dich ein:
-```bash
-ssh deployuser@<deine-ip>
-```
-
-Navigiere in das Zielverzeichnis und klone das Repository:
-```bash
-cd /opt/podcast-ai
-sudo git clone <deine-repo-url> .
-sudo chown -R deployuser:deployuser .
-```
-
----
-
-## 🔑 Schritt 3: Konfiguration (.env)
-
-Erstelle die Umgebungsvariablen aus der Vorlage:
-```bash
-cp .env.example .env
-nano .env
-```
-
-Fülle die folgenden Felder aus:
-*   `GEMINI_API_KEY`: Dein API-Key von Google.
-*   `DB_PASSWORD`: Ein neues, sicheres Passwort für die MariaDB.
-*   `GOOGLE_KEY_LOCAL_PATH`: `./google-credentials.json`.
-
-**Wichtig:** Kopiere deine `google-credentials.json` per SCP auf den Server in den Ordner `/opt/podcast-ai/`.
-
----
-
-## 🚢 Schritt 4: Start mit Docker Compose
-
-Starte die gesamte Infrastruktur (App + Datenbank):
-```bash
-docker-compose up -d --build
-```
-
-Die App ist nun unter `http://<deine-ip>:7860` erreichbar.
-
----
-
-## 🛡 Sicherheits-Checks (Für die Übergabe)
-
-Um zu beweisen, dass das System gehärtet ist, kannst du folgende Befehle nutzen:
-
-1.  **Firewall-Status:**
+1.  **Repository klonen**:
     ```bash
-    sudo ufw status
+    git clone <repository-url>
+    cd podcast-ai
     ```
-    *Ergebnis: Nur 22 und 7860 sollten "ALLOW" sein.*
 
-2.  **SSH Sicherheit:**
+2.  **Abhängigkeiten installieren**:
+    Es wird empfohlen, eine virtuelle Umgebung zu verwenden:
     ```bash
-    grep "PermitRootLogin" /etc/ssh/sshd_config
+    python -m venv .venv
+    source .venv/bin/activate  # Unter Windows: .venv\Scripts\activate
+    pip install -r requirements.txt
     ```
-    *Ergebnis: Sollte `no` sein.*
 
-3.  **Docker Container Status:**
-    ```bash
-    docker ps
+3.  **Umgebungsvariablen konfigurieren**:
+    Erstelle eine `.env`-Datei im Hauptverzeichnis basierend auf der `.env.example`:
+    ```env
+    GEMINI_API_KEY=dein_gemini_key
+    GOOGLE_APPLICATION_CREDENTIALS=pfad/zu/deinen/credentials.json
+    DB_URL=mysql+pymysql://user:password@localhost/podcast_db
+    HOST=127.0.0.1
+    PORT=7860
     ```
-    *Ergebnis: Zwei Container (`podcast-generator` und `podcast-db`) müssen laufen.*
+
+## Anwendung starten
+
+Starten Sie die Anwendung mit dem Hauptskript:
+
+```bash
+python main.py
+```
+
+Nach dem Start ist die Weboberfläche standardmäßig unter `http://127.0.0.1:7860` erreichbar.
+
+## Projektstruktur
+
+- `database/`: Datenbankmodelle und Initialisierungsskripte.
+- `frontend/`: UI-Komponenten und Styling.
+- `repositories/`: Kapselung der Datenbankzugriffe.
+- `services/`: Geschäftslogik und API-Integrationen.
+- `tests/`: Automatisierte Tests für die verschiedenen Module.
+- `Output/`: Speicherort für die generierten MP3-Dateien.
 
 ---
-
-## 💡 Tipps & Tricks für den Betrieb
-
-*   **Logs einsehen:** `docker-compose logs -f podcast-app` hilft bei der Fehlersuche.
-*   **Datenbank-Zugriff:** Du musst nicht in den DB-Container. Die App kümmert sich um die Tabellen.
-*   **Update:** Wenn du neuen Code hast: `git pull && docker-compose up -d --build`.
-
----
-
-*Diese Dokumentation wurde für die Projektübergabe am 14. Februar 2026 erstellt.*
+*Dokumentation aktualisiert am 19. Februar 2026.*
