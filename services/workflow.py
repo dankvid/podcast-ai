@@ -2,6 +2,7 @@ from datetime import date
 import os
 import uuid
 import re
+from typing import Tuple, List
 
 
 from .llm_service import LLMService
@@ -33,7 +34,7 @@ class PodcastWorkflow(IWorkflow):
     """Workflow: LLM → Skript → TTS → DB"""
 
     def __init__(
-        self, llm_service: ILLMService = None, tts_service: ITTSService = None
+        self, llm_service: ILLMService | None = None, tts_service: ITTSService | None = None
     ):
         self.llm_service = llm_service or LLMService()
         self.tts_service = tts_service or GoogleTTSService()
@@ -209,7 +210,7 @@ class PodcastWorkflow(IWorkflow):
         finally:
             session.close()
 
-    def get_podcasts_data(self, user_id: int = None):
+    def get_podcasts_data(self, user_id: int | None):
         """Returns list of dicts for the UI cards, filtered by user_id if provided."""
         session = get_db()
         try:
@@ -260,12 +261,12 @@ class PodcastWorkflow(IWorkflow):
         finally:
             session.close()
 
-    def get_voices_for_ui(self):
+    def get_voices_for_ui(self) -> Tuple[List[str], List[str]]:
         session = get_db()
         try:
             voice_repo = VoiceRepo(session)
-            primary_names = [v.name for v in voice_repo.get_voices_by_slot(1)]
-            secondary_names = [v.name for v in voice_repo.get_voices_by_slot(2)]
+            primary_names: List[str] = [v.name for v in voice_repo.get_voices_by_slot(1)]
+            secondary_names: List[str] = [v.name for v in voice_repo.get_voices_by_slot(2)]
             return primary_names, secondary_names
         finally:
             session.close()
