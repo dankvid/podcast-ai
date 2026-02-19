@@ -39,3 +39,4 @@ pytest-mock
 selenium
 #PYTHONPATH=. pytest --cov=services
 pytest-cov
+dotenv
