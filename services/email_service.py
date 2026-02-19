@@ -64,7 +64,7 @@ class EmailService:
                 data={
                     "from": f"{self.sender_name} <{self.sender_email}>",
                     "to": [to_email],
-                    "subject": f"Dein Login-Code: {token}",
+                    "subject": "Dein Login-Code für Podcast AI",
                     "text": f"Moin! Dein Code ist: {token}",
                     "html": self._get_html_template(token),
                 },

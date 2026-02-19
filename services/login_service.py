@@ -121,30 +121,7 @@ def process_login_request(email: str) -> Union[str, Dict[str, Any]]:
     Raises:
         Exception: Reicht Datenbank- oder Authentifizierungsfehler nach Rollback weiter.
     """
-    TEST_EMAIL = "test@smail.th-koeln.de"
-    FAMILY_EMAIL = "family@smail.th-koeln.de"
 
-    if email.lower() == FAMILY_EMAIL:
-        db = get_db()
-        try:
-            user = UserRepo(db).get_by_email(email)
-            if not user:
-                user = UserRepo(db).create_user(email)
-            db.commit()
-            return {"id": user.userId, "email": email}
-        finally:
-            db.close()
-
-    if email.lower() == TEST_EMAIL:
-        db = get_db()
-        try:
-            user = UserRepo(db).get_by_email(email)
-            if not user:
-                user = UserRepo(db).create_user(email)
-            db.commit()
-            return {"id": user.userId, "email": email}
-        finally:
-            db.close()
 
     db = get_db()
     try:

@@ -52,7 +52,7 @@ class LLMService(ILLMService):
             raise LLMServiceError("Umgebungsvariable GEMINI_API_KEY fehlt.")
 
         self.model = model
-        self.url = f"https://generativelanguage.googleapis.com/v1/{self.model}:generateContent?key={self.api_key}"
+        self.url = f"https://generativelanguage.googleapis.com/v1/{self.model}:generateContent"
         self.use_dummy = use_dummy
 
     # Prompt-Bausteine
@@ -219,7 +219,8 @@ class LLMService(ILLMService):
 
         for attempt in range(self.MAX_ATTEMPTS):
             try:
-                response = requests.post(self.url, json=body, timeout=self.TIMEOUT)
+                headers = {"x-goog-api-key": self.api_key}
+                response = requests.post(self.url, json=body, headers=headers, timeout=self.TIMEOUT)
             except requests.RequestException as e:
                 if attempt < self.MAX_ATTEMPTS - 1:
                     time.sleep(1)

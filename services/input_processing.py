@@ -39,6 +39,38 @@ def fetch_text_from_url(url: str) -> Tuple[str, str]:
     """Scrapes text from a given URL and returns (text, title)."""
     if not url:
         return "", ""
+    
+    # SSRF Protection: Validate URL scheme and block private IPs
+    from urllib.parse import urlparse
+    try:
+        parsed = urlparse(url)
+        if parsed.scheme not in ['http', 'https']:
+            print(f"Invalid URL scheme: {parsed.scheme}")
+            return "", ""
+        
+        # Block localhost and private IP ranges
+        import socket
+        hostname = parsed.hostname
+        if not hostname:
+            print("Invalid URL: no hostname")
+            return "", ""
+        
+        # Resolve hostname to IP
+        try:
+            ip = socket.gethostbyname(hostname)
+            # Block private IP ranges
+            import ipaddress
+            ip_obj = ipaddress.ip_address(ip)
+            if ip_obj.is_private or ip_obj.is_loopback or ip_obj.is_link_local:
+                print(f"Blocked private/local IP: {ip}")
+                return "", ""
+        except (socket.gaierror, ValueError) as e:
+            print(f"Could not resolve hostname: {e}")
+            return "", ""
+    except Exception as e:
+        print(f"URL validation error: {e}")
+        return "", ""
+    
     try:
         r = requests.get(url, timeout=15, headers={"User-Agent": "Mozilla/5.0"})
         r.raise_for_status()
