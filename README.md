@@ -25,6 +25,7 @@ Beim Erstellen deiner VM (z.B. bei Hetzner, AWS oder DigitalOcean) kannst du die
 
 > **Wichtig:** Trage vor dem Start deinen SSH-Key in die `cloud-init.yaml` unter `ssh_authorized_keys` ein!
 
+
 ---
 
 ## 🏗 Schritt 2: Anwendung installieren
