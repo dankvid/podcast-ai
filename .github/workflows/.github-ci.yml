@@ -49,7 +49,7 @@ jobs:
           uv venv .venv
           # In GitHub Actions nutzt man 'source' oder fügt den Pfad zur GITHUB_PATH hinzu
           echo "${{ github.workspace }}/.venv/bin" >> $GITHUB_PATH
-          ./.venv/bin/uv pip install -r requirements.txt
+          uv pip install -r requirements.txt
 
       - name: Run Tests
         run: |
