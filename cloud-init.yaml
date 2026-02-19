@@ -4,29 +4,55 @@ package_upgrade: true
 
 packages:
   - docker.io
-  - docker-compose
+  - docker-compose-v2
   - git
   - ufw
   - fail2ban
 
 users:
-  - name: deployuser
+  - name: admin
     groups: [sudo, docker]
     shell: /bin/bash
     sudo: ALL=(ALL) NOPASSWD:ALL
     lock_passwd: true
     ssh_authorized_keys:
-      - ssh-rsa DEIN_PUBLIC_SSH_KEY_HIER
+      - <public_ssh_key>
 
 write_files:
+  - path: /root/.ssh/id_deploy # Beispiel Name für den SSH Key
+    content: |
+       # Hier deinen SSH Key für Github
+    permission: '0600' 
   # .env Datei vorbereiten
   - path: /opt/podcast-ai/.env
     content: |
       GOOGLE_APPLICATION_CREDENTIALS=/opt/podcast-ai/google-key.json
-      # Hier weitere Variablen aus deiner .env.example ergänzen
-      DATABASE_URL=sqlite:///./podcast.db
+      GEMINI_API_KEY=
+      MAILGUN_API_KEY=dein_mailgun_key
+      MAILGUN_DOMAIN=deine_domain.com
+      SMTP_FROM_EMAIL=noreply@deine_domain.com
+      DB_USER=podcast_user
+      DB_PASSWORD=ein_sicheres_passwort
+      DB_NAME=podcast_db
+      DB_HOST=db
+      DB_PORT=3306
 
-  # Google Cloud Key (Platzhalter - musst du mit deinem echten Inhalt ersetzen)
+  # SSH Hardening (Port 2222 und User admin)
+  - path: /etc/ssh/sshd_config.d/ssh-hardening.conf
+    content: |
+      PermitRootLogin no
+      PasswordAuthentication no
+      Port 2222
+      KbdInteractiveAuthentication no
+      ChallengeResponseAuthentication no
+      MaxAuthTries 3
+      AllowTcpForwarding no
+      X11Forwarding no
+      AllowAgentForwarding no
+      AuthorizedKeysFile .ssh/authorized_keys
+      AllowUsers admin
+
+  # Google Cloud Key Platzhalter
   - path: /opt/podcast-ai/google-key.json
     content: |
       {
@@ -35,21 +61,34 @@ write_files:
       }
 
 runcmd:
+  # SSH Setup
+  - mkdir -p /root/.ssh
+  - chmod 700 /root./ssh
+  - ssh-keyscan github.com >> /root/.ssh/known_host
   # Docker Setup
   - systemctl enable docker
   - systemctl start docker
 
-  # Firewall Setup
+  # Firewall Setup (SSH Port anpassen!)
   - ufw default deny incoming
   - ufw default allow outgoing
-  - ufw allow 22/tcp
+  - ufw allow 2222/tcp
   - ufw allow 7860/tcp
   - ufw --force enable
+  - systemctl restart ssh
 
-  # Projekt klonen und starten
-  - git clone -b master https://github.com/DEIN_USERNAME/DEIN_REPO.git /opt/podcast-ai/repo
+  # Projekt-Verzeichnis vorbereiten
+  - mkdir -p /opt/podcast-ai/repo
+  - git clone -b master git@github.com:dankvid/podcast-ai.git /opt/podcast-ai/repo
+  
+  # Dateien an den richtigen Ort schieben
   - cp /opt/podcast-ai/.env /opt/podcast-ai/repo/.env
   - cp /opt/podcast-ai/google-key.json /opt/podcast-ai/repo/google-key.json
-  - cd /opt/podcast-ai/repo && docker-compose up -d --build
+  
+  # Berechtigungen korrigieren, damit der 'admin' User arbeiten kann
+  - chown -R admin:admin /opt/podcast-ai
+  
+  # Container starten
+  - cd /opt/podcast-ai/repo && docker compose up -d --build
 
-final_message: "Podcast-AI wurde installiert und wird im Hintergrund gestartet."
+final_message: "Podcast-AI wurde installiert"
