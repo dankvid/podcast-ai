@@ -2,7 +2,6 @@
 package_update: true
 package_upgrade: true
 
-# 1. Zusätzliche Sicherheitspakete installieren
 packages:
   - docker.io
   - docker-compose
@@ -10,7 +9,6 @@ packages:
   - ufw
   - fail2ban
 
-# 2. Einen dedizierten User anlegen (nicht root nutzen!)
 users:
   - name: deployuser
     groups: [sudo, docker]
@@ -18,28 +16,40 @@ users:
     sudo: ALL=(ALL) NOPASSWD:ALL
     lock_passwd: true
     ssh_authorized_keys:
-      - ssh-rsa DEIN_PUBLIC_SSH_KEY_HIER  # <-- HIER DEINEN PUBLIC KEY EINTRAGEN
+      - ssh-rsa DEIN_PUBLIC_SSH_KEY_HIER
 
-# 3. SSH Hardening & Firewall Konfiguration
+write_files:
+  # .env Datei vorbereiten
+  - path: /opt/podcast-ai/.env
+    content: |
+      GOOGLE_APPLICATION_CREDENTIALS=/opt/podcast-ai/google-key.json
+      # Hier weitere Variablen aus deiner .env.example ergänzen
+      DATABASE_URL=sqlite:///./podcast.db
+
+  # Google Cloud Key (Platzhalter - musst du mit deinem echten Inhalt ersetzen)
+  - path: /opt/podcast-ai/google-key.json
+    content: |
+      {
+        "type": "service_account",
+        "project_id": "DEINE_PROJECT_ID"
+      }
+
 runcmd:
-  # Docker Starten
+  # Docker Setup
   - systemctl enable docker
   - systemctl start docker
-  
-  # Firewall einstellen (UFW)
+
+  # Firewall Setup
   - ufw default deny incoming
   - ufw default allow outgoing
-  - ufw allow 22/tcp      
-  - ufw allow 7860/tcp    # Dein Podcast-Generator (Gradio)
+  - ufw allow 22/tcp
+  - ufw allow 7860/tcp
   - ufw --force enable
 
-  # SSH Hardening: Root Login und Passwort-Login verbieten
-  - sed -i 's/^#PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
-  - sed -i 's/^PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
-  - systemctl restart ssh
+  # Projekt klonen und starten
+  - git clone -b master https://github.com/DEIN_USERNAME/DEIN_REPO.git /opt/podcast-ai/repo
+  - cp /opt/podcast-ai/.env /opt/podcast-ai/repo/.env
+  - cp /opt/podcast-ai/google-key.json /opt/podcast-ai/repo/google-key.json
+  - cd /opt/podcast-ai/repo && docker-compose up -d --build
 
-  # Projektverzeichnis vorbereiten
-  - mkdir -p /opt/podcast-ai
-  - chown deployuser:deployuser /opt/podcast-ai
-
-final_message: "System gehärtet und bereit. Login als 'deployuser' möglich."
+final_message: "Podcast-AI wurde installiert und wird im Hintergrund gestartet."
