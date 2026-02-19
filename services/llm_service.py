@@ -22,7 +22,7 @@ class LLMService(ILLMService):
     """
 
     # Standard-Konfigurationen
-    DEFAULT_MODEL = "models/gemini-2.5-flash-lite"
+    DEFAULT_MODEL = "models/gemini-2.5-flash"
     DEFAULT_LANGUAGE = "Deutsch"
     DEFAULT_SPEAKER = "Max"
     WORDS_PER_MIN = 140
@@ -119,6 +119,7 @@ class LLMService(ILLMService):
             + "- Jede Sprecherzeile darf höchstens 1–2 Sätze enthalten.\n"
             "- Keine langen Monologe: Teile Inhalte auf kurze Abschnitte auf.\n"
             "- Sprecherlabels MÜSSEN so aussehen: 'Max:' oder 'Sara:'.\n"
+            "- Packe keine ** vor und nach den Sprecherlabes!"
             f"- Erlaubte Sprecher: {s1}"
             + (f" und {s2}.\n" if s2 else ".\n")
             + roles_text
