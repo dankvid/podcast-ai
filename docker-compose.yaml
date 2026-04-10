@@ -24,6 +24,7 @@ services:
       - PORT=7860
       - DB_HOST=db  # Verweist auf den 'db' Service oben
       - DB_PORT=3306
+      - API_KEY=${API_KEY}
       - GOOGLE_APPLICATION_CREDENTIALS=/app/google-credentials.json
     env_file:
       - .env
